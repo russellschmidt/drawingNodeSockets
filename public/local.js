@@ -88,43 +88,57 @@ canvas.addEventListener('mouseup', stopDrawing);
 // PART FOUR
 // for Drawing by client
 var isDrawing = false;
+var lastSent; // count ms
+var prevX;
+var prevY;
 
 function startDrawing(event) {
   console.log("START: " + event.clientX + ", " + event.clientY);
   isDrawing = true;
-  pen.beginPath();
-  pen.moveTo(event.clientX, event.clientY );
-  // note JavaScript same function name 'mousedown' - doesnt HAVE to match JS
-  // just 
-  socket.emit('mousedown', {x: event.clientX, y: event.clientY}); 
+  lastSent = Date.now(); // current time in MS sine 1.1.1970
+  prevX = event.clientX;
+  prevY = event.clientY;
+
+  // pen.beginPath();
+  // pen.moveTo(event.clientX, event.clientY );
+  // // note JavaScript same function name 'mousedown' - doesnt HAVE to match JS
+  // // just 
+  // socket.emit('mousedown', {x: event.clientX, y: event.clientY}); 
 }
 
 // for Drawing by Client
 function drawStuff(event) {
   console.log("Moved to: " + event.clientX + ", " + event.clientY);
-  if (isDrawing) {
+  if (isDrawing && Date.now() - lastSent > 30) {
+    pen.beginPath();
+    pen.moveTo(prevX, prevY);
     pen.lineTo(event.clientX, event.clientY);
     pen.stroke();
-    socket.emit('mousemove', {x: event.clientX, y: event.clientY});
+
+    console.log("From: " + prevX + "," + prevY + " to: " + event.clientX + ", " + event.clientY );
+
+    lastSent = Date.now();
+    // sending off short line segments to server
+    socket.emit('new line', {fromX: prevX, fromY: prevY, toX: event.clientX, toY: event.clientY});
+
+    prevX = event.clientX;
+    prevY = event.clientY;
   }
 }
 
 function stopDrawing(event) {
+  isDrawing = false;
   console.log("STOP: " + event.clientX + ", " + event.clientY);
 
   // Which canvas drawing functions should go here?? (or none at all?)
-  pen.stroke();
 }
 
 // to receive the client data and draw it on the canvas
 // Add this to the bottom of your local.js file:
-socket.on('mousedown', function(data) {
+socket.on('new line', function(data) {
   pen.beginPath();
-  pen.moveTo(data.x, data.y);
-});
-
-socket.on('mousemove', function(data) {
-  pen.lineTo(data.x, data.y);
+  pen.moveTo(data.fromX, data.fromY);
+  pen.lineTo(data.toX, data.toY);
   pen.stroke();
 });
 

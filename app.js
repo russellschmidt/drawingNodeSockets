@@ -56,6 +56,11 @@ io.on('connection', function(socket) {
     socket.broadcast.emit('mousemove', data);
   });
 
+  socket.on('new line', function(data) {
+    console.log(data)
+    socket.broadcast.emit('new line', data);
+  });
+
 });
 
 
